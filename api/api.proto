@@ -1,0 +1,35 @@
+syntax = "proto3";
+option go_package = "api";
+
+// API Service
+package api;
+
+import "google/api/annotations.proto";
+
+// Message represents a simple message sent to the Echo service.
+message Record {
+	string id = 1;
+    // Record Type see https://github.com/miekg/dns/blob/master/types.go#L27
+    string type = 2;
+    // Record Name
+	string domain = 3;
+    // TTL time to live of the record
+	int32 expires = 4;
+}
+
+// DDNS service responds to incoming echo requests.
+service DDNSService {
+	// Echo method receives a simple message and returns it.
+	// The message posted as the id parameter will also be returned.
+	rpc SaveRecord(Record) returns (Record) {
+		option (google.api.http) = {
+			post: "/v1/record"
+		};
+	}
+
+	rpc DeleteRecord(Record) returns (Record) {
+		option (google.api.http) = {
+			delete: "/v1/record"
+		};
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/muka/dyndns/api"
 	"github.com/muka/dyndns/db"
 	ddns "github.com/muka/dyndns/dns"
 	log "github.com/sirupsen/logrus"
@@ -96,6 +97,18 @@ func main() {
 			EnvVar: "TSIG",
 		},
 		cli.StringFlag{
+			Name:   "http-server, s",
+			Value:  ":5551",
+			Usage:  "host:port combination to bind the http service to",
+			EnvVar: "HTTP",
+		},
+		cli.StringFlag{
+			Name:   "grpc-server, g",
+			Value:  ":50551",
+			Usage:  "host:port combination to bind the grpc service to",
+			EnvVar: "GRPC",
+		},
+		cli.StringFlag{
 			Name:   "dbpath, d",
 			Value:  "./data/ddns.db",
 			Usage:  "location where db will be stored",
@@ -103,7 +116,7 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:   "port, p",
-			Value:  53,
+			Value:  10053,
 			Usage:  "DNS server port",
 			EnvVar: "PORT",
 		},
@@ -117,6 +130,9 @@ func main() {
 		tsig := c.String("tsig")
 		dbPath := c.String("dbpath")
 		port := c.Int("port")
+
+		httpServer := c.String("http-server")
+		grpcEndpoint := c.String("grpc-server")
 
 		var (
 			name   string // tsig keyname
@@ -142,8 +158,18 @@ func main() {
 		}
 
 		// Start server
-		log.Debug("Start server")
 		go serve(name, secret, port)
+
+		go func() {
+			if err := api.Run(grpcEndpoint); err != nil {
+				panic(err.Error())
+			}
+		}()
+		go func() {
+			if err := api.RunEndPoint(grpcEndpoint, httpServer); err != nil {
+				panic(err.Error())
+			}
+		}()
 
 		sig := make(chan os.Signal)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)

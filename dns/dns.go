@@ -84,7 +84,9 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 		if header.Class == dns.ClassANY && header.Rdlength == 0 { // Delete record
 			log.Debugf("Remove %s", name)
 			db.DeleteRecord(revName, rtype)
-		} else { // Add record
+		} else {
+
+			// Add record
 			rheader := dns.RR_Header{
 				Name:   name,
 				Rrtype: rtype,
@@ -103,7 +105,9 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 				ip = a.A
 				rr.(*dns.A).Hdr = rheader
 				rr.(*dns.A).A = ip
+
 			} else if a, ok := r.(*dns.AAAA); ok {
+
 				rrr, err := GetRecord(name, rtype)
 				if err == nil {
 					rr = rrr.(*dns.AAAA)
@@ -114,6 +118,7 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 				ip = a.AAAA
 				rr.(*dns.AAAA).Hdr = rheader
 				rr.(*dns.AAAA).AAAA = ip
+
 			}
 
 			rrKey, err1 := GetKey(rr.Header().Name, rr.Header().Rrtype)
