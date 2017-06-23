@@ -2,8 +2,9 @@ package db
 
 import (
 	"errors"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/boltdb/bolt"
 )

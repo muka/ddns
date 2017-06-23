@@ -1,0 +1,8 @@
+server localhost 10053
+debug yes
+key some_key c29tZV9rZXk=
+zone local.lan.
+update add test1.local.lan. 120 A 127.0.0.1
+update add test2.local.lan. 120 A 127.0.0.1
+show
+send

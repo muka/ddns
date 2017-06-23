@@ -2,11 +2,12 @@ package dns
 
 import (
 	"errors"
-	"log"
 	"math"
 	"net"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/miekg/dns"
 	"github.com/muka/dyndns/db"
@@ -14,7 +15,9 @@ import (
 
 //GetKey return the reverse domain
 func GetKey(domain string, rtype uint16) (r string, e error) {
+	log.Debugf("Get key for %s", domain)
 	if n, ok := dns.IsDomainName(domain); ok {
+
 		labels := dns.SplitDomainName(domain)
 
 		// Reverse domain, starting from top-level domain
@@ -27,21 +30,31 @@ func GetKey(domain string, rtype uint16) (r string, e error) {
 		}
 
 		reverseDomain := strings.Join(labels, ".")
-		r = strings.Join([]string{reverseDomain, strconv.Itoa(int(rtype))}, "_ ")
+		r = strings.Join([]string{reverseDomain, strconv.Itoa(int(rtype))}, "_")
+		log.Debugf("Key is %s", r)
 	} else {
 		e = errors.New("Invalid domain:  " + domain)
-		log.Println(e.Error())
+		log.Error(e.Error())
 	}
 
 	return r, e
 }
 
 //GetRecord return a new DNS record
-func GetRecord(key string, rtype uint16) (dns.RR, error) {
+func GetRecord(domain string, rtype uint16) (dns.RR, error) {
+
+	log.Debugf("Load record %s", domain)
+
+	key, err := GetKey(domain, rtype)
+	if err != nil {
+		return nil, err
+	}
+
 	val, err := db.GetRecord(key, rtype)
 	if err == nil {
 		return dns.NewRR(string(val))
 	}
+
 	return nil, err
 }
 
@@ -69,6 +82,7 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 
 	if _, ok := dns.IsDomainName(name); ok {
 		if header.Class == dns.ClassANY && header.Rdlength == 0 { // Delete record
+			log.Debugf("Remove %s", name)
 			db.DeleteRecord(revName, rtype)
 		} else { // Add record
 			rheader := dns.RR_Header{
@@ -79,7 +93,7 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 			}
 
 			if a, ok := r.(*dns.A); ok {
-				rrr, err := GetRecord(revName, rtype)
+				rrr, err := GetRecord(name, rtype)
 				if err == nil {
 					rr = rrr.(*dns.A)
 				} else {
@@ -90,7 +104,7 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 				rr.(*dns.A).Hdr = rheader
 				rr.(*dns.A).A = ip
 			} else if a, ok := r.(*dns.AAAA); ok {
-				rrr, err := GetRecord(revName, rtype)
+				rrr, err := GetRecord(name, rtype)
 				if err == nil {
 					rr = rrr.(*dns.AAAA)
 				} else {
@@ -106,8 +120,9 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 			if err1 != nil {
 				return err1
 			}
-
 			rrBody := rr.String()
+
+			log.Debugf("Saving record %s (%s)", rr.Header().Name, rrKey)
 			db.StoreRecord(rrKey, rrBody)
 		}
 	}

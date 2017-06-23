@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -12,12 +11,12 @@ import (
 	"github.com/miekg/dns"
 	"github.com/muka/dyndns/db"
 	ddns "github.com/muka/dyndns/dns"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 func parseQuery(m *dns.Msg) {
 	var rr dns.RR
-
 	for _, q := range m.Question {
 		if readRR, e := ddns.GetRecord(q.Name, q.Qtype); e == nil {
 			rr = readRR.(dns.RR)
@@ -29,18 +28,21 @@ func parseQuery(m *dns.Msg) {
 }
 
 func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
+
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Compress = false
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
+		log.Debugf("Got query request")
 		parseQuery(m)
 
 	case dns.OpcodeUpdate:
+		log.Debugf("Got update request")
 		for _, question := range r.Question {
 			for _, rr := range r.Ns {
-				updateRecord(rr, &question)
+				ddns.UpdateRecord(rr, &question)
 			}
 		}
 	}
@@ -57,9 +59,10 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	w.WriteMsg(m)
 }
 
-func serve(name, secret string, port int) {
+func serve(name, secret string, port int) error {
 
-	server := &dns.Server{Addr: ": " + strconv.Itoa(port), Net: "udp"}
+	log.Debugf("Starting server on :%d", port)
+	server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
 
 	if name != "" {
 		server.TsigSecret = map[string]string{name: secret}
@@ -69,8 +72,10 @@ func serve(name, secret string, port int) {
 	defer server.Shutdown()
 
 	if err != nil {
-		log.Fatalf("Failed to setup the udp server: %sn ", err.Error())
+		log.Fatalf("Failed to setup the udp server: %s", err.Error())
 	}
+
+	return err
 }
 
 func main() {
@@ -102,78 +107,56 @@ func main() {
 			Usage:  "DNS server port",
 			EnvVar: "PORT",
 		},
-		cli.StringFlag{
-			Name:   "pid",
-			Value:  "./data/ddns.pid",
-			Usage:  "pid file location",
-			EnvVar: "PID",
-		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 
-		logfile := c.String("logfile")
+		log.SetLevel(log.DebugLevel)
+
+		// logfile := c.String("logfile")
 		tsig := c.String("tsig")
 		dbPath := c.String("dbpath")
 		port := c.Int("port")
-		pidFile := c.String("pid")
 
 		var (
-			name   string   // tsig keyname
-			secret string   // tsig base64
-			fh     *os.File // logfile handle
+			name   string // tsig keyname
+			secret string // tsig base64
 		)
 
-		err := db.Connect(dbPath)
-		if err != nil {
-			panic(err)
+		log.Debugf("Connecting to %s", dbPath)
+		err1 := db.Connect(dbPath)
+		if err1 != nil {
+			panic(err1)
 		}
 		defer db.Disconnect()
 
 		// Attach request handler func
+		log.Debug("Attaching DNS handler")
 		dns.HandleFunc(".", handleDNSRequest)
 
 		// Tsig extract
+		log.Debug("Check for TSIG")
 		if tsig != "" {
 			a := strings.SplitN(tsig, ":", 2)
 			name, secret = dns.Fqdn(a[0]), a[1]
 		}
 
-		// Logger setup
-		if logfile != "" {
-			if _, err := os.Stat(logfile); os.IsNotExist(err) {
-				if file, err := os.Create(logfile); err != nil {
-					if err != nil {
-						log.Panic("Couldn't create log file: ", err)
-					}
-
-					fh = file
-				}
-			} else {
-				fh, _ = os.OpenFile(logfile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-			}
-			defer fh.Close()
-			log.SetOutput(fh)
-		}
-
-		// Pidfile
-		file, err := os.OpenFile(pidFile, os.O_RDWR|os.O_CREATE, 0666)
-		if err != nil {
-			log.Panic("Couldn't create pid file: ", err)
-		} else {
-			file.Write([]byte(strconv.Itoa(syscall.Getpid())))
-			defer file.Close()
-		}
-
 		// Start server
+		log.Debug("Start server")
 		go serve(name, secret, port)
 
 		sig := make(chan os.Signal)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+		quit := false
 		for {
 			select {
 			case s := <-sig:
 				log.Printf("Signal (%d) received, stopping", s)
+				quit = true
+				break
+			}
+			if quit {
 				break
 			}
 		}
