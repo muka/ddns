@@ -26,7 +26,7 @@ api:
 	protoc -I/usr/local/include -I. -I${GOPATH}/src -I${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --swagger_out=logtostderr=true:. api/api.proto
 
 api/client: api
-	cd api && swagger generate client -f api.swagger.json -m api/models -c api/client
+	swagger generate client -f api/api.swagger.json
 
 build: prepare api
 	CGO_ENABLED=${CGO} ARCH=${ARCH} GOARCH=${GOARCH} GOARM=${GOARM} go build -o ./build/${NAME} main.go
