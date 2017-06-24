@@ -1,12 +1,22 @@
 # Dynamic DNS Service
 
-## Example Usage
+Go based dynamic DNS service.
 
-### Rest API support
+## Supported record
+
+- A / AAAA + (PTR)
+- CNAME
+- MX
+
+## Running
+
+`make build run`
+
+## Rest API
 
 gRPC (`:50551`) / HTTP (`:5551`) endpoint are available
 
-#### Set record
+### Set record
 
 ```bash
 curl -X POST http://localhost:5551/v1/record \
@@ -19,23 +29,23 @@ curl -X POST http://localhost:5551/v1/record \
 }'
 ```
 
-#### Remove Record
+### Remove Record
 
 `curl -X DELETE http://localhost:5551/v1/record/foobar.local.lan/A`
 
-#### Test Record
+### Test Record
 
 `nslookup foobar.local.lan localhost -port=10053`
 
-### TSIG support
+## TSIG support
 
 Run `go run main.go --tsig some_key:c29tZV9rZXk=`
 
-#### Using nsupdate
+### Using nsupdate
 
 Update with `nsupdate nsupdate.txt`
 
-#### Test records
+### Test records
 
 `nslookup test1.local.lan localhost -port=10053`
 
