@@ -1,0 +1,114 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "API Service",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/record": {
+      "post": {
+        "summary": "Echo method receives a simple message and returns it.\nThe message posted as the id parameter will also be returned.",
+        "operationId": "SaveRecord",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiRecord"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiRecord"
+            }
+          }
+        ],
+        "tags": [
+          "DDNSService"
+        ]
+      }
+    },
+    "/v1/record/{domain}/{type}": {
+      "delete": {
+        "operationId": "DeleteRecord",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiRecord"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DDNSService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "apiRecord": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string",
+          "title": "Record IP address"
+        },
+        "domain": {
+          "type": "string",
+          "title": "Record Name"
+        },
+        "type": {
+          "type": "string",
+          "title": "Record Type see https://github.com/miekg/dns/blob/master/types.go#L27"
+        },
+        "expires": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Expiration of the record, after which will be removed.\nDefault is 0 for not expiring"
+        },
+        "TTL": {
+          "type": "integer",
+          "format": "int32",
+          "title": "TTL time to live of the record"
+        },
+        "PTR": {
+          "type": "boolean",
+          "format": "boolean",
+          "title": "Add a PTR (reverse) record"
+        }
+      },
+      "description": "Message represents a simple message sent to the Echo service."
+    }
+  }
+}

@@ -19,12 +19,12 @@ func main() {
 	app := cli.NewApp()
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "logfile, l",
-			Value:  "./data/logs",
-			Usage:  "path to logfile",
-			EnvVar: "LOGFILE",
-		},
+		// cli.StringFlag{
+		// 	Name:   "logfile, l",
+		// 	Value:  "./data/logs",
+		// 	Usage:  "path to logfile",
+		// 	EnvVar: "LOGFILE",
+		// },
 		cli.StringFlag{
 			Name:   "tsig, t",
 			Value:  "",
