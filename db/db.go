@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -12,6 +13,12 @@ import (
 var bdb *bolt.DB
 
 const rrBucket = "rr"
+
+// Record store a DNS record with metadata
+type Record struct {
+	RR      string
+	Expires int64
+}
 
 //Connect create a bucket
 func Connect(dbPath string) error {
@@ -52,7 +59,7 @@ func createBucket(bucket string) error {
 }
 
 //DeleteRecord create a bucket
-func DeleteRecord(key string, rtype uint16) (err error) {
+func DeleteRecord(key string) (err error) {
 	err = bdb.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(rrBucket))
 		err1 := b.Delete([]byte(key))
@@ -70,15 +77,19 @@ func DeleteRecord(key string, rtype uint16) (err error) {
 }
 
 //StoreRecord save a new record
-func StoreRecord(key string, record string) error {
+func StoreRecord(key string, record Record) error {
 	return bdb.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(rrBucket))
-		err := b.Put([]byte(key), []byte(record))
 
+		b := tx.Bucket([]byte(rrBucket))
+
+		val, err := json.Marshal(record)
 		if err != nil {
-			e := errors.New("Store record failed:  " + record)
-			log.Println(e.Error())
-			return e
+			return err
+		}
+
+		err1 := b.Put([]byte(key), val)
+		if err1 != nil {
+			return err1
 		}
 
 		return nil
@@ -86,21 +97,25 @@ func StoreRecord(key string, record string) error {
 }
 
 //GetRecord return a stored record for a domain
-func GetRecord(key string, rtype uint16) ([]byte, error) {
-	var v []byte
+func GetRecord(key string) (r Record, err error) {
+	err = bdb.View(func(tx *bolt.Tx) error {
 
-	err := bdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(rrBucket))
-		v = b.Get([]byte(key))
+		raw := b.Get([]byte(key))
 
-		if len(v) == 0 {
+		if len(raw) == 0 {
 			e := errors.New("Record not found, key:  " + key)
 			log.Println(e.Error())
+			return e
+		}
+
+		e := json.Unmarshal(raw, r)
+		if e != nil {
 			return e
 		}
 
 		return nil
 	})
 
-	return v, err
+	return r, err
 }

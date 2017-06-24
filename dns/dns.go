@@ -50,9 +50,9 @@ func GetRecord(domain string, rtype uint16) (dns.RR, error) {
 		return nil, err
 	}
 
-	val, err := db.GetRecord(key, rtype)
+	record, err := db.GetRecord(key)
 	if err == nil {
-		return dns.NewRR(string(val))
+		return dns.NewRR(record.RR)
 	}
 
 	return nil, err
@@ -83,16 +83,11 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 	if _, ok := dns.IsDomainName(name); ok {
 		if header.Class == dns.ClassANY && header.Rdlength == 0 { // Delete record
 			log.Debugf("Remove %s", name)
-			db.DeleteRecord(revName, rtype)
+			db.DeleteRecord(revName)
 		} else {
 
 			// Add record
-			rheader := dns.RR_Header{
-				Name:   name,
-				Rrtype: rtype,
-				Class:  dns.ClassINET,
-				Ttl:    ttl,
-			}
+			rheader := GetHeader(name, rtype, ttl)
 
 			if a, ok := r.(*dns.A); ok {
 				rrr, err := GetRecord(name, rtype)
@@ -125,12 +120,50 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 			if err1 != nil {
 				return err1
 			}
-			rrBody := rr.String()
 
 			log.Debugf("Saving record %s (%s)", rr.Header().Name, rrKey)
-			db.StoreRecord(rrKey, rrBody)
+
+			record := db.Record{
+				RR:      rr.String(),
+				Expires: 0,
+			}
+			db.StoreRecord(rrKey, record)
+
 		}
 	}
 
 	return nil
+}
+
+// GetHeader create a new record header
+func GetHeader(name string, rtype uint16, ttl uint32) dns.RR_Header {
+	return dns.RR_Header{
+		Name:   name,
+		Rrtype: rtype,
+		Class:  dns.ClassINET,
+		Ttl:    ttl,
+	}
+}
+
+//AddPTRRecord for the specified domain and ip address
+func AddPTRRecord(ip string, domain string, ttl uint32, expires int64) error {
+
+	rtype := dns.TypePTR
+
+	rr := new(dns.PTR)
+	rr.Ptr = ip
+	rr.Hdr = GetHeader(domain, rtype, ttl)
+
+	key, err := GetKey(domain, rtype)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Adding PTR Record %s > %s", ip, domain)
+	record := db.Record{
+		Expires: expires,
+		RR:      rr.String(),
+	}
+
+	return db.StoreRecord(key, record)
 }

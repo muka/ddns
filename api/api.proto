@@ -9,12 +9,19 @@ import "google/api/annotations.proto";
 // Message represents a simple message sent to the Echo service.
 message Record {
 	string id = 1;
-    // Record Type see https://github.com/miekg/dns/blob/master/types.go#L27
-    string type = 2;
-    // Record Name
+	// Record IP address
+    string ip = 2;
+	// Record Name
 	string domain = 3;
+    // Record Type see https://github.com/miekg/dns/blob/master/types.go#L27
+    string type = 4;
+    // Expiration of the record, after which will be removed.
+	// Default is 0 for not expiring
+	int32 expires = 5;
     // TTL time to live of the record
-	int32 expires = 4;
+	int32 TTL = 6;
+    // Add a PTR (reverse) record
+	bool PTR = 7;
 }
 
 // DDNS service responds to incoming echo requests.
@@ -24,12 +31,13 @@ service DDNSService {
 	rpc SaveRecord(Record) returns (Record) {
 		option (google.api.http) = {
 			post: "/v1/record"
+			body: "*"
 		};
 	}
 
 	rpc DeleteRecord(Record) returns (Record) {
 		option (google.api.http) = {
-			delete: "/v1/record"
+			delete: "/v1/record/{domain}/{type}"
 		};
 	}
 }
