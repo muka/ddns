@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/boltdb/bolt"
@@ -18,6 +19,20 @@ const rrBucket = "rr"
 type Record struct {
 	RR      string
 	Expires int64
+	ID      string
+}
+
+func genid() string {
+	return xid.New().String()
+}
+
+//NewRecord create a new record
+func NewRecord(rr string, expires int64) Record {
+	return Record{
+		ID:      genid(),
+		Expires: expires,
+		RR:      rr,
+	}
 }
 
 //Connect create a bucket
@@ -49,10 +64,8 @@ func createBucket(bucket string) error {
 	return bdb.Update(func(tx *bolt.Tx) error {
 		_, err1 := tx.CreateBucketIfNotExists([]byte(bucket))
 		if err1 != nil {
-			e := errors.New("Create bucket:  " + bucket)
-			log.Println(e.Error())
-
-			return e
+			log.Errorf("Failed to create bucket: %s", err1.Error())
+			return err1
 		}
 		return nil
 	})
@@ -82,6 +95,9 @@ func StoreRecord(key string, record Record) error {
 
 		b := tx.Bucket([]byte(rrBucket))
 
+		record.ID = genid()
+		log.Debugf("Set ID %s", record.ID)
+
 		val, err := json.Marshal(record)
 		if err != nil {
 			return err
@@ -109,11 +125,13 @@ func GetRecord(key string) (r Record, err error) {
 			return e
 		}
 
-		e := json.Unmarshal(raw, r)
+		e := json.Unmarshal(raw, &r)
 		if e != nil {
+			log.Errorf("Record unmarshalling failed: %s", e.Error())
 			return e
 		}
 
+		log.Debugf("Record found %s", r.RR)
 		return nil
 	})
 

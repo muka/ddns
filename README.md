@@ -10,7 +10,7 @@ Go based dynamic DNS service.
 
 ## Running
 
-`make build run`
+`go run main --debug`
 
 ## Rest API
 

@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -123,10 +124,7 @@ func UpdateRecord(r dns.RR, q *dns.Question) error {
 
 			log.Debugf("Saving record %s (%s)", rr.Header().Name, rrKey)
 
-			record := db.Record{
-				RR:      rr.String(),
-				Expires: 0,
-			}
+			record := db.NewRecord(rr.String(), 0)
 			db.StoreRecord(rrKey, record)
 
 		}
@@ -160,10 +158,82 @@ func AddPTRRecord(ip string, domain string, ttl uint32, expires int64) error {
 	}
 
 	log.Debugf("Adding PTR Record %s > %s", ip, domain)
-	record := db.Record{
-		Expires: expires,
-		RR:      rr.String(),
-	}
+	record := db.NewRecord(rr.String(), expires)
 
 	return db.StoreRecord(key, record)
+}
+
+func parseQuery(m *dns.Msg) {
+	var rr dns.RR
+	for _, q := range m.Question {
+		log.Debugf("DNS query: %s", q.String())
+		readRR, e := GetRecord(q.Name, q.Qtype)
+		if e != nil {
+			log.Errorf("Error getting record: %s", e.Error())
+			continue
+		}
+		rr = readRR.(dns.RR)
+		if rr.Header().Name == q.Name {
+			log.Debugf("Found match: %s", rr.String())
+			m.Answer = append(m.Answer, rr)
+		}
+
+	}
+}
+
+//HandleDNSRequest handle incoming requests
+func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
+
+	m := new(dns.Msg)
+	m.SetReply(r)
+	m.Compress = false
+
+	switch r.Opcode {
+	case dns.OpcodeQuery:
+		log.Debugf("Got query request")
+		parseQuery(m)
+
+	case dns.OpcodeUpdate:
+		if enableUpdates {
+			log.Debugf("Got update request")
+			for _, question := range r.Question {
+				for _, rr := range r.Ns {
+					UpdateRecord(rr, &question)
+				}
+			}
+		} else {
+			log.Debugf("Update request ignored, TSIG missing")
+		}
+	}
+
+	if r.IsTsig() != nil {
+		if w.TsigStatus() == nil {
+			m.SetTsig(r.Extra[len(r.Extra)-1].(*dns.TSIG).Hdr.Name,
+				dns.HmacMD5, 300, time.Now().Unix())
+		} else {
+			log.Println("Status ", w.TsigStatus().Error())
+		}
+	}
+
+	w.WriteMsg(m)
+}
+
+//Serve the DNS server
+func Serve(name, secret string, port int) error {
+
+	log.Debugf("Starting server on :%d", port)
+	server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
+
+	if name != "" {
+		server.TsigSecret = map[string]string{name: secret}
+	}
+
+	err := server.ListenAndServe()
+	defer server.Shutdown()
+
+	if err != nil {
+		log.Fatalf("Failed to setup the udp server: %s", err.Error())
+	}
+
+	return err
 }

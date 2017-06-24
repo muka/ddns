@@ -16,41 +16,28 @@ import (
 	"google.golang.org/grpc"
 )
 
+const defaultTTL = 120
+
 type ddnsServer struct{}
 
 func newDDNSServer() DDNSServiceServer {
 	return new(ddnsServer)
 }
 
-func (s *ddnsServer) DeleteRecord(ctx context.Context, msg *Record) (*Record, error) {
-	log.Debugf("Delete request %s %s", msg.GetType(), msg.GetDomain())
-	return msg, nil
-}
+func getRecord(msg *Record) (rr dns.RR) {
 
-func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, error) {
+	var rtype uint16
 
-	log.Debugf("Save request: %s %s %s", msg.GetType(), msg.GetDomain(), msg.GetIp())
-
-	var ttl uint32 = 120
+	var ttl uint32 = defaultTTL
 	if msg.GetTTL() > 0 {
 		ttl = uint32(msg.GetTTL())
 	}
-
-	if msg.GetIp() == "" {
-		return nil, errors.New("IP is missing")
-	}
-	if msg.GetDomain() == "" {
-		return nil, errors.New("Domain is missing")
-	}
-
-	var rtype uint16
-	var rr dns.RR
 
 	switch strings.ToUpper(msg.GetType()) {
 	case "A":
 
 		rtype = dns.TypeA
-		ipaddress := net.IP(msg.GetIp())
+		ipaddress := net.ParseIP(msg.GetIp())
 
 		rr = new(dns.A)
 		rr.(*dns.A).A = ipaddress
@@ -60,7 +47,7 @@ func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, erro
 	case "AAAA":
 
 		rtype = dns.TypeAAAA
-		ipaddress := net.IP(msg.GetIp())
+		ipaddress := net.ParseIP(msg.GetIp())
 
 		rr = new(dns.AAAA)
 		rr.(*dns.AAAA).AAAA = ipaddress
@@ -89,6 +76,54 @@ func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, erro
 		break
 	}
 
+	return rr
+}
+
+func (s *ddnsServer) DeleteRecord(ctx context.Context, msg *Record) (*Record, error) {
+	log.Debugf("Delete request %s %s", msg.GetType(), msg.GetDomain())
+
+	if msg.GetDomain() == "" {
+		return nil, errors.New("Domain is missing")
+	}
+
+	if msg.GetType() == "" {
+		return nil, errors.New("Type is missing")
+	}
+
+	rr := getRecord(msg)
+	key, err := ddns.GetKey(rr.Header().Name, rr.Header().Rrtype)
+	if err != nil {
+		return nil, err
+	}
+
+	err1 := db.DeleteRecord(key)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	return msg, nil
+}
+
+func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, error) {
+
+	log.Debugf("Save request: %s %s %s", msg.GetType(), msg.GetDomain(), msg.GetIp())
+
+	if msg.GetIp() == "" {
+		return nil, errors.New("IP is missing")
+	}
+
+	ipaddress := net.ParseIP(msg.GetIp())
+	if ipaddress == nil {
+		return nil, errors.New("Cannot parse IP")
+	}
+
+	if msg.GetDomain() == "" {
+		return nil, errors.New("Domain is missing")
+	}
+
+	rr := getRecord(msg)
+	rtype := rr.Header().Rrtype
+
 	if rtype == 0 {
 		return nil, errors.New("Record type not supported (Use one of A, AAAA, MX, CNAME)")
 	}
@@ -98,11 +133,7 @@ func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, erro
 		return nil, err
 	}
 
-	record := db.Record{
-		Expires: int64(msg.GetExpires()),
-		RR:      rr.String(),
-	}
-
+	record := db.NewRecord(rr.String(), int64(msg.GetExpires()))
 	err = db.StoreRecord(key, record)
 
 	if err != nil {
@@ -111,7 +142,7 @@ func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, erro
 
 	if msg.GetPTR() {
 		// Add PTR record
-		err := ddns.AddPTRRecord(msg.GetIp(), msg.GetDomain(), ttl, int64(msg.GetExpires()))
+		err := ddns.AddPTRRecord(msg.GetIp(), msg.GetDomain(), rr.Header().Ttl, int64(msg.GetExpires()))
 		if err != nil {
 			return nil, err
 		}

@@ -3,10 +3,8 @@ package main
 import (
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/muka/dyndns/api"
@@ -15,69 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
-
-func parseQuery(m *dns.Msg) {
-	var rr dns.RR
-	for _, q := range m.Question {
-		if readRR, e := ddns.GetRecord(q.Name, q.Qtype); e == nil {
-			rr = readRR.(dns.RR)
-			if rr.Header().Name == q.Name {
-				m.Answer = append(m.Answer, rr)
-			}
-		}
-	}
-}
-
-func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
-
-	m := new(dns.Msg)
-	m.SetReply(r)
-	m.Compress = false
-
-	switch r.Opcode {
-	case dns.OpcodeQuery:
-		log.Debugf("Got query request")
-		parseQuery(m)
-
-	case dns.OpcodeUpdate:
-		log.Debugf("Got update request")
-		for _, question := range r.Question {
-			for _, rr := range r.Ns {
-				ddns.UpdateRecord(rr, &question)
-			}
-		}
-	}
-
-	if r.IsTsig() != nil {
-		if w.TsigStatus() == nil {
-			m.SetTsig(r.Extra[len(r.Extra)-1].(*dns.TSIG).Hdr.Name,
-				dns.HmacMD5, 300, time.Now().Unix())
-		} else {
-			log.Println("Status ", w.TsigStatus().Error())
-		}
-	}
-
-	w.WriteMsg(m)
-}
-
-func serve(name, secret string, port int) error {
-
-	log.Debugf("Starting server on :%d", port)
-	server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
-
-	if name != "" {
-		server.TsigSecret = map[string]string{name: secret}
-	}
-
-	err := server.ListenAndServe()
-	defer server.Shutdown()
-
-	if err != nil {
-		log.Fatalf("Failed to setup the udp server: %s", err.Error())
-	}
-
-	return err
-}
 
 func main() {
 
@@ -120,19 +55,26 @@ func main() {
 			Usage:  "DNS server port",
 			EnvVar: "PORT",
 		},
+		cli.BoolFlag{
+			Name:   "debug",
+			Usage:  "Enable debug",
+			EnvVar: "DEBUG",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 
-		log.SetLevel(log.DebugLevel)
-
 		// logfile := c.String("logfile")
+		debug := c.Bool("debug")
 		tsig := c.String("tsig")
 		dbPath := c.String("dbpath")
 		port := c.Int("port")
-
 		httpServer := c.String("http-server")
 		grpcEndpoint := c.String("grpc-server")
+
+		if debug {
+			log.SetLevel(log.DebugLevel)
+		}
 
 		var (
 			name   string // tsig keyname
@@ -146,20 +88,22 @@ func main() {
 		}
 		defer db.Disconnect()
 
-		// Attach request handler func
-		log.Debug("Attaching DNS handler")
-		dns.HandleFunc(".", handleDNSRequest)
-
+		enableUpdates := false
 		// Tsig extract
 		log.Debug("Check for TSIG")
 		if tsig != "" {
 			a := strings.SplitN(tsig, ":", 2)
 			name, secret = dns.Fqdn(a[0]), a[1]
+			enableUpdates = true
 		}
 
-		// Start server
-		go serve(name, secret, port)
+		// Attach request handler func
+		log.Debug("Attaching DNS handler")
+		dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
+			ddns.HandleDNSRequest(w, r, enableUpdates)
+		})
 
+		log.Debug("Starting services")
 		go func() {
 			if err := api.Run(grpcEndpoint); err != nil {
 				panic(err.Error())
@@ -171,24 +115,33 @@ func main() {
 			}
 		}()
 
-		sig := make(chan os.Signal)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		// Start server
+		go ddns.Serve(name, secret, port)
 
-		quit := false
-		for {
-			select {
-			case s := <-sig:
-				log.Printf("Signal (%d) received, stopping", s)
-				quit = true
-				break
-			}
-			if quit {
-				break
-			}
-		}
+		waitSignal()
 
 		return nil
 	}
 
 	app.Run(os.Args)
+}
+
+func waitSignal() {
+
+	sig := make(chan os.Signal)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	quit := false
+	for {
+		select {
+		case s := <-sig:
+			log.Printf("Signal (%d) received, stopping", s)
+			quit = true
+			break
+		}
+		if quit {
+			break
+		}
+	}
+
 }
