@@ -56,7 +56,7 @@ Update with `nsupdate nsupdate.txt`
 
 ## Credits
 
-Inspired by [the post](http://mkaczanowski.com/golang-build-dynamic-dns-service-go/) of Mateusz Kaczanowski
+Inspired by [this post](http://mkaczanowski.com/golang-build-dynamic-dns-service-go/) of Mateusz Kaczanowski
 
 ## License
 
