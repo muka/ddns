@@ -9,7 +9,7 @@ NAME=`basename ${PKG}`
 GOPKGS=${GOPATH}/src
 GOPKGSRC=${GOPKGS}/${PKG}
 IMAGE="opny/${NAME}-${ARCH}"
-CGO=0
+CGO ?= 0
 
 clean:
 	rm -rf ./build

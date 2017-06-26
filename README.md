@@ -1,6 +1,6 @@
 # Dynamic DNS Service
 
-Go based dynamic DNS service.
+Simple dynamic DNS service for LAN use
 
 ## Supported record
 
@@ -10,13 +10,18 @@ Go based dynamic DNS service.
 
 ## Running
 
-`go run cli/cli --debug`
+```bash
+make build
+./build/ddns --debug
+```
+
+or `go run cli/cli --debug`
 
 ## Rest API
 
-gRPC (`:50551`) / HTTP (`:5551`) endpoint are available
+Offers a gRPC (`:50551`) and HTTP/JSON (`:5551`) endpoint. See also generated [./api/api.swagger.json](./api/api.swagger.json) for usage reference.
 
-### Set record
+### Create a record
 
 ```bash
 curl -X POST http://localhost:5551/v1/record \
@@ -25,7 +30,7 @@ curl -X POST http://localhost:5551/v1/record \
 	"ip": "127.0.0.1",
 	"domain": "foobar.local.lan",
 	"type": "A",
-	"expires": 123456789
+	"expires": 1498454965
 }'
 ```
 
@@ -37,7 +42,7 @@ curl -X POST http://localhost:5551/v1/record \
 
 `nslookup foobar.local.lan localhost -port=10053`
 
-## TSIG support
+## nsupdate support
 
 Run `go run main.go --tsig some_key:c29tZV9rZXk=`
 
@@ -48,6 +53,10 @@ Update with `nsupdate nsupdate.txt`
 ### Test records
 
 `nslookup test1.local.lan localhost -port=10053`
+
+## Credits
+
+Inspired by [the post](http://mkaczanowski.com/golang-build-dynamic-dns-service-go/) of Mateusz Kaczanowski
 
 ## License
 
