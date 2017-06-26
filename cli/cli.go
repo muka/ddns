@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/muka/dyndns/api"
@@ -13,6 +14,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
+
+const timerSeconds = 15
 
 func main() {
 
@@ -118,12 +121,28 @@ func main() {
 		// Start server
 		go ddns.Serve(name, secret, port)
 
+		scheduler()
+		// ticker := scheduler()
+		// ticker.Stop()
+
 		waitSignal()
 
 		return nil
 	}
 
 	app.Run(os.Args)
+}
+
+func scheduler() *time.Ticker {
+
+	ticker := time.NewTicker(time.Second * timerSeconds)
+	go func() {
+		for range ticker.C {
+			ddns.RemoveExpired()
+		}
+	}()
+
+	return ticker
 }
 
 func waitSignal() {

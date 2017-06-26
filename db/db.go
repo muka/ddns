@@ -83,6 +83,7 @@ func DeleteRecord(key string) (err error) {
 			return e
 		}
 
+		log.Debugf("Removed %s", key)
 		return nil
 	})
 
@@ -136,4 +137,31 @@ func GetRecord(key string) (r Record, err error) {
 	})
 
 	return r, err
+}
+
+//FilterRecords return a list of records in the database
+func FilterRecords(fn func(r *Record) bool) ([]string, error) {
+	list := make([]string, 0)
+	err := bdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(rrBucket))
+		err1 := b.ForEach(func(k, v []byte) error {
+
+			r := Record{}
+			e := json.Unmarshal(v, &r)
+			if e != nil {
+				log.Errorf("Record unmarshalling failed: %s", e.Error())
+				return e
+			}
+
+			if fn(&r) {
+				list = append(list, string(k))
+			}
+
+			return nil
+		})
+
+		return err1
+	})
+
+	return list, err
 }
