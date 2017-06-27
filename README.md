@@ -22,8 +22,7 @@ sudo cp bin/protoc /usr/bin/
 
 ```
 
-
-Get following go dependencies
+Get the following go dependencies
 
 ```bash
 

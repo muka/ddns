@@ -28,10 +28,10 @@ api:
 api/client: api
 	swagger generate client -f api/api.swagger.json
 
-build: prepare api
-	CGO_ENABLED=${CGO} ARCH=${ARCH} GOARCH=${GOARCH} GOARM=${GOARM} go build -o ./build/${NAME} main.go
+build: prepare api api/client
+	CGO_ENABLED=${CGO} ARCH=${ARCH} GOARCH=${GOARCH} GOARM=${GOARM} go build -o ./build/${NAME} cli/cli.go
 
-run: api
+run: api api/client
 	go run cli/cli.go
 
 docker/build:
