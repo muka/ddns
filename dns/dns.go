@@ -240,9 +240,11 @@ func Serve(name, secret string, port int) error {
 
 //RemoveExpired Check for expired record and remove them
 func RemoveExpired() {
+
 	log.Debug("Checking expired records")
+
 	list, err := db.FilterRecords(func(r *db.Record) bool {
-		return r.Expires < time.Now().Unix()
+		return r.Expires != 0 && r.Expires < time.Now().Unix()
 	})
 
 	if err != nil {

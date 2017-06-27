@@ -101,6 +101,24 @@ func (s *ddnsServer) DeleteRecord(ctx context.Context, msg *Record) (*Record, er
 		return nil, err1
 	}
 
+	key, err = ddns.GetKey(rr.Header().Name, dns.TypeCNAME)
+	if err != nil {
+		return nil, err
+	}
+
+	ptr, err := db.GetRecord(key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if &ptr != nil {
+		err1 = db.DeleteRecord(key)
+		if err1 != nil {
+			return nil, err1
+		}
+	}
+
 	return msg, nil
 }
 

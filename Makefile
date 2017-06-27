@@ -1,14 +1,14 @@
-.PHONY: clean prepare api api/client build docker/push docker/build run deps
+.PHONY: clean prepare api api/client build docker/push docker/build docker/clean run deps
 
 ARCH ?= amd64
 GOARCH ?= ${ARCH}
 GOARM ?= 7
 
-PKG=github.com/muka/dyndns
-NAME=`basename ${PKG}`
+NAME=ddns
+PKG=github.com/muka/${NAME}
 GOPKGS=${GOPATH}/src
 GOPKGSRC=${GOPKGS}/${PKG}
-IMAGE="opny/${NAME}-${ARCH}"
+IMAGE="raptorbox/${NAME}-${ARCH}"
 CGO ?= 0
 
 clean:
@@ -39,5 +39,8 @@ docker/build:
 
 docker/push: docker/build
 	docker push ${IMAGE}
+
+docker/clean:
+	docker rmi $(docker images | grep ${NAME} | awk '{print $1}')
 
 all: deps build api/client docker/build

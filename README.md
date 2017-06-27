@@ -8,6 +8,12 @@ Simple dynamic DNS service for LAN use
 - CNAME
 - MX
 
+## Running with docker
+
+```bash
+docker run -v `pwd`/data:/data raptorbox/ddns-amd64 --debug
+```
+
 ## Setup
 
 Ensure `protoc` is installed and the `*.proto` includes reachable. Eg.
