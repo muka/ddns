@@ -8,6 +8,33 @@ Simple dynamic DNS service for LAN use
 - CNAME
 - MX
 
+## Setup
+
+Ensure `protoc` is installed and the `*.proto` includes reachable. Eg.
+
+```bash
+wget https://github.com/google/protobuf/releases/download/v3.3.0/protoc-3.3.0-linux-x86_64.zip
+mkdir tmp
+cd tmp
+unzip protoc-3.3.0-linux-x86_64.zip
+sudo cp include/google/ /usr/local/include/ -r
+sudo cp bin/protoc /usr/bin/
+
+```
+
+
+Get following go dependencies
+
+```bash
+
+go get ./...
+
+go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+go get -u github.com/golang/protobuf/protoc-gen-go
+
+```
+
 ## Running
 
 ```bash
