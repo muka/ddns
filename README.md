@@ -26,7 +26,7 @@ Get the following go dependencies
 
 ```bash
 
-go get ./...
+go get -u -f ./...
 
 go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
