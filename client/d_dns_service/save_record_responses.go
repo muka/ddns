@@ -11,7 +11,7 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/muka/dyndns/models"
+	"github.com/muka/ddns/models"
 )
 
 // SaveRecordReader is a Reader for the SaveRecord structure.

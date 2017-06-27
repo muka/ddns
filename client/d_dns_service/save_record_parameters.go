@@ -15,7 +15,7 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/muka/dyndns/models"
+	"github.com/muka/ddns/models"
 )
 
 // NewSaveRecordParams creates a new SaveRecordParams object

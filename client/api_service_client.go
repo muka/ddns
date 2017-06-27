@@ -9,7 +9,7 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/muka/dyndns/client/d_dns_service"
+	"github.com/muka/ddns/client/d_dns_service"
 )
 
 // Default API service HTTP client.

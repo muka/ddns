@@ -31,6 +31,10 @@ go get ./...
 go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 go get -u github.com/golang/protobuf/protoc-gen-go
+go get -u github.com/go-swagger/go-swagger/cmd/swagger
+go get -u github.com/go-openapi/runtime
+go get -u golang.org/x/net/context
+go get -u golang.org/x/net/context/ctxhttp
 
 ```
 
