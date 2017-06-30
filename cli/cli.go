@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/muka/dyndns/api"
-	"github.com/muka/dyndns/db"
-	ddns "github.com/muka/dyndns/dns"
+	"github.com/muka/ddns/api"
+	"github.com/muka/ddns/db"
+	ddns "github.com/muka/ddns/dns"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-const timerSeconds = 15
+const timerSeconds = 2
 
 func main() {
 

@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/miekg/dns"
-	"github.com/muka/dyndns/db"
+	"github.com/muka/ddns/db"
 )
 
 //GetKey return the reverse domain
@@ -242,10 +242,7 @@ func Serve(name, secret string, port int) error {
 func RemoveExpired() {
 
 	log.Debug("Checking expired records")
-
-	list, err := db.FilterRecords(func(r *db.Record) bool {
-		return r.Expires != 0 && r.Expires < time.Now().Unix()
-	})
+	list, err := db.GetExpiredRecords()
 
 	if err != nil {
 		log.Errorf("Failed to list expired values: %s", err.Error())

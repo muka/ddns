@@ -139,8 +139,8 @@ func GetRecord(key string) (r Record, err error) {
 	return r, err
 }
 
-//FilterRecords return a list of records in the database
-func FilterRecords(fn func(r *Record) bool) ([]string, error) {
+//GetExpiredRecords return a list of records in the database
+func GetExpiredRecords() ([]string, error) {
 	list := make([]string, 0)
 	err := bdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(rrBucket))
@@ -153,7 +153,8 @@ func FilterRecords(fn func(r *Record) bool) ([]string, error) {
 				return e
 			}
 
-			if fn(&r) {
+			if r.Expires > 0 && r.Expires < time.Now().Unix() {
+				log.Debugf("Drop %s", string(k))
 				list = append(list, string(k))
 			}
 
@@ -162,6 +163,11 @@ func FilterRecords(fn func(r *Record) bool) ([]string, error) {
 
 		return err1
 	})
+
+	if err != nil {
+		log.Errorf("Failed filter: %s", err.Error())
+		return nil, err
+	}
 
 	return list, err
 }

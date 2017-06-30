@@ -10,8 +10,8 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/miekg/dns"
-	"github.com/muka/dyndns/db"
-	ddns "github.com/muka/dyndns/dns"
+	"github.com/muka/ddns/db"
+	ddns "github.com/muka/ddns/dns"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
