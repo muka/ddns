@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const timerSeconds = 2
+const timerSeconds = 15
 
 func main() {
 
