@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const defaultTTL = 120
+const defaultTTL = 0
 
 type ddnsServer struct{}
 

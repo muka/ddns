@@ -187,6 +187,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Compress = false
+	m.RecursionDesired = false
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
