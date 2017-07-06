@@ -163,8 +163,9 @@ func AddPTRRecord(ip string, domain string, ttl uint32, expires int64) error {
 	return db.StoreRecord(key, record)
 }
 
-func parseQuery(m *dns.Msg) {
+func parseQuery(m *dns.Msg) bool {
 	var rr dns.RR
+	found := 0
 	for _, q := range m.Question {
 		log.Debugf("DNS query: %s", q.String())
 		readRR, e := GetRecord(q.Name, q.Qtype)
@@ -176,9 +177,11 @@ func parseQuery(m *dns.Msg) {
 		if rr.Header().Name == q.Name {
 			log.Debugf("Found match: %s", rr.String())
 			m.Answer = append(m.Answer, rr)
+			found++
 		}
-
 	}
+
+	return found > 0
 }
 
 //HandleDNSRequest handle incoming requests
@@ -187,13 +190,19 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Compress = false
-	m.RecursionDesired = false
+	// m.RecursionDesired = false
 	m.Authoritative = true
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
 		log.Debugf("Got query request")
-		parseQuery(m)
+		found := parseQuery(m)
+
+		if !found {
+			// return NXDOMAIN
+			log.Debugf("Record found")
+			m.SetRcode(r, dns.RcodeNameError)
+		}
 
 	case dns.OpcodeUpdate:
 		if enableUpdates {
