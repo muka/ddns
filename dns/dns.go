@@ -194,18 +194,19 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 	switch r.Opcode {
 	case dns.OpcodeQuery:
 
+		m.Authoritative = true
+		m.RecursionAvailable = true
+		// m.RecursionDesired = true
+
 		log.Debugf("Got query request")
 		found := parseQuery(m)
 
-		m.RecursionAvailable = true
-		// m.RecursionDesired = true
-		m.Authoritative = true
-
-		if found {
-
-		} else {
+		if !found {
 			// return NXDOMAIN
-			log.Debugf("Record found")
+			log.Debugf("Record not found")
+
+			m.Authoritative = true
+			m.RecursionAvailable = true
 
 			m.SetRcode(r, dns.RcodeNameError)
 		}
