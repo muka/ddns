@@ -212,10 +212,10 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 //Serve the DNS server
-func Serve(port int) error {
+func Serve(ip string, port int) error {
 
 	log.Debugf("Starting server on :%d", port)
-	server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
+	server := &dns.Server{Addr: ip + ":" + strconv.Itoa(port), Net: "udp"}
 
 	err := server.ListenAndServe()
 	defer server.Shutdown()
