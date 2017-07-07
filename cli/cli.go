@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -22,18 +21,6 @@ func main() {
 	app := cli.NewApp()
 
 	app.Flags = []cli.Flag{
-		// cli.StringFlag{
-		// 	Name:   "logfile, l",
-		// 	Value:  "./data/logs",
-		// 	Usage:  "path to logfile",
-		// 	EnvVar: "LOGFILE",
-		// },
-		cli.StringFlag{
-			Name:   "tsig, t",
-			Value:  "",
-			Usage:  "use MD5 hmac tsig: keyname:base64",
-			EnvVar: "TSIG",
-		},
 		cli.StringFlag{
 			Name:   "http-server, s",
 			Value:  ":5551",
@@ -67,9 +54,7 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 
-		// logfile := c.String("logfile")
 		debug := c.Bool("debug")
-		tsig := c.String("tsig")
 		dbPath := c.String("dbpath")
 		port := c.Int("port")
 		httpServer := c.String("http-server")
@@ -79,11 +64,6 @@ func main() {
 			log.SetLevel(log.DebugLevel)
 		}
 
-		var (
-			name   string // tsig keyname
-			secret string // tsig base64
-		)
-
 		log.Debugf("Connecting to %s", dbPath)
 		err1 := db.Connect(dbPath)
 		if err1 != nil {
@@ -91,19 +71,10 @@ func main() {
 		}
 		defer db.Disconnect()
 
-		enableUpdates := false
-		// Tsig extract
-		log.Debug("Check for TSIG")
-		if tsig != "" {
-			a := strings.SplitN(tsig, ":", 2)
-			name, secret = dns.Fqdn(a[0]), a[1]
-			enableUpdates = true
-		}
-
 		// Attach request handler func
 		log.Debug("Attaching DNS handler")
 		dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
-			ddns.HandleDNSRequest(w, r, enableUpdates)
+			ddns.HandleDNSRequest(w, r)
 		})
 
 		log.Debug("Starting services")

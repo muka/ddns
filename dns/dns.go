@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -185,7 +184,7 @@ func parseQuery(m *dns.Msg) bool {
 }
 
 //HandleDNSRequest handle incoming requests
-func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
+func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 
 	m := new(dns.Msg)
 	m.SetReply(r)
@@ -195,7 +194,8 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 	case dns.OpcodeQuery:
 
 		m.Authoritative = true
-		m.RecursionAvailable = true
+
+		// m.RecursionAvailable = true
 		// m.RecursionDesired = true
 
 		log.Debugf("Got query request")
@@ -204,32 +204,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 		if !found {
 			// return NXDOMAIN
 			log.Debugf("Record not found")
-
-			m.Authoritative = true
-			m.RecursionAvailable = true
-
 			m.SetRcode(r, dns.RcodeNameError)
-		}
-
-	case dns.OpcodeUpdate:
-		if enableUpdates {
-			log.Debugf("Got update request")
-			for _, question := range r.Question {
-				for _, rr := range r.Ns {
-					UpdateRecord(rr, &question)
-				}
-			}
-		} else {
-			log.Debugf("Update request ignored, TSIG missing")
-		}
-	}
-
-	if r.IsTsig() != nil {
-		if w.TsigStatus() == nil {
-			m.SetTsig(r.Extra[len(r.Extra)-1].(*dns.TSIG).Hdr.Name,
-				dns.HmacMD5, 300, time.Now().Unix())
-		} else {
-			log.Println("Status ", w.TsigStatus().Error())
 		}
 	}
 
