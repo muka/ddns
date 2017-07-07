@@ -195,6 +195,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
+
 		log.Debugf("Got query request")
 		found := parseQuery(m)
 
