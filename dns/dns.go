@@ -170,7 +170,7 @@ func parseQuery(m *dns.Msg) bool {
 		log.Debugf("DNS query: %s", q.String())
 		readRR, e := GetRecord(q.Name, q.Qtype)
 		if e != nil {
-			log.Errorf("Error getting record: %s", e.Error())
+			log.Debugf("Error getting record: %s", e.Error())
 			continue
 		}
 		rr = readRR.(dns.RR)
@@ -190,8 +190,6 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 	m := new(dns.Msg)
 	m.SetReply(r)
 	m.Compress = false
-	// m.RecursionDesired = false
-	m.Authoritative = true
 
 	switch r.Opcode {
 	case dns.OpcodeQuery:
@@ -199,9 +197,16 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg, enableUpdates bool) {
 		log.Debugf("Got query request")
 		found := parseQuery(m)
 
-		if !found {
+		m.RecursionAvailable = true
+		// m.RecursionDesired = true
+		m.Authoritative = true
+
+		if found {
+
+		} else {
 			// return NXDOMAIN
 			log.Debugf("Record found")
+
 			m.SetRcode(r, dns.RcodeNameError)
 		}
 
