@@ -212,14 +212,10 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 //Serve the DNS server
-func Serve(name, secret string, port int) error {
+func Serve(port int) error {
 
 	log.Debugf("Starting server on :%d", port)
 	server := &dns.Server{Addr: ":" + strconv.Itoa(port), Net: "udp"}
-
-	if name != "" {
-		server.TsigSecret = map[string]string{name: secret}
-	}
 
 	err := server.ListenAndServe()
 	defer server.Shutdown()

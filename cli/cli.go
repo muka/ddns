@@ -90,7 +90,7 @@ func main() {
 		}()
 
 		// Start server
-		go ddns.Serve(name, secret, port)
+		go ddns.Serve(port)
 
 		scheduler()
 		// ticker := scheduler()
