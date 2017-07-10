@@ -141,29 +141,30 @@ func ClearCache() (err error) {
 }
 
 //ResetDNSServer reset dnsmasq dns to the connection defaults
+// @note: this seems not to work, let it unchanged and just clear the dns cache
 func ResetDNSServer() (err error) {
 
 	// conn, err := GetSystemDbus()
 	// if err != nil {
 	// 	return err
 	// }
-
-	list := make([][]string, 0)
 	//
-	// dnsServers, err := GetDNSServers()
+	// list := make([][]string, 0)
+	// //
+	// // dnsServers, err := GetDNSServers()
+	// // if err != nil {
+	// // 	return err
+	// // }
+	// // for i := 0; i < len(dnsServers); i++ {
+	// // 	list = append(list, []string{dnsServers[i]})
+	// // }
+	//
+	// log.Debugf("Setting dns %v", list)
+	//
+	// err = conn.Object(dnsmasqService, dbus.ObjectPath(dnsmasqObjectPath)).Call(dnsmasqBaseInterface+"SetServers", 0, list).Store()
 	// if err != nil {
-	// 	return err
+	// 	log.Errorf("Failed to update DNS servers: %s", err.Error())
 	// }
-	// for i := 0; i < len(dnsServers); i++ {
-	// 	list = append(list, []string{dnsServers[i]})
-	// }
-
-	log.Debugf("Setting dns %v", list)
-
-	err = conn.Object(dnsmasqService, dbus.ObjectPath(dnsmasqObjectPath)).Call(dnsmasqBaseInterface+"SetServers", 0, list).Store()
-	if err != nil {
-		log.Errorf("Failed to update DNS servers: %s", err.Error())
-	}
 
 	return ClearCache()
 }
