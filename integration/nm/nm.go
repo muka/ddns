@@ -1,4 +1,4 @@
-package dnsmasq
+package nm
 
 import (
 	"encoding/binary"
