@@ -24,7 +24,7 @@ const (
 	propertiesBaseInterface string = "org.freedesktop.DBus.Properties."
 )
 
-var conn *dbus.Conn
+var dbusConn *dbus.Conn
 
 // DNSServers a dns server with mapped domains
 type DNSServers struct {
@@ -32,34 +32,41 @@ type DNSServers struct {
 	zones     []string
 }
 
-// //NetworkManagerProperties a structure to receive NM properties
-// type NetworkManagerProperties struct {
-// 	Devices                 []dbus.ObjectPath
-// 	AllDevices              []dbus.ObjectPath
-// 	NetworkingEnabled       bool
-// 	WirelessEnabled         bool
-// 	WirelessHardwareEnabled bool
-// 	WwanEnabled             bool
-// 	WwanHardwareEnabled     bool
-// 	WimaxEnabled            bool
-// 	WimaxHardwareEnabled    bool
-// 	ActiveConnections       []dbus.ObjectPath
-// 	PrimaryConnection       dbus.ObjectPath
-// 	PrimaryConnectionType   string
-// 	Metered                 uint32
-// 	ActivatingConnection    dbus.ObjectPath
-// 	Startup                 bool
-// 	Version                 string
-// 	State                   uint32
-// 	Connectivity            uint32
-// 	GlobalDnsConfiguration  map[string]interface{}
-// }
+//AddressData is the current IP4Config IP address
+// See https://people.freedesktop.org/~lkundrak/nm-dbus-api/gdbus-org.freedesktop.NetworkManager.IP4Config.html#gdbus-property-org-freedesktop-NetworkManager-IP4Config.AddressData
+type AddressData struct {
+	prefix  uint32
+	address string
+}
+
+//NetworkManagerProperties a structure to receive NM properties
+type NetworkManagerProperties struct {
+	Devices                 []dbus.ObjectPath
+	AllDevices              []dbus.ObjectPath
+	NetworkingEnabled       bool
+	WirelessEnabled         bool
+	WirelessHardwareEnabled bool
+	WwanEnabled             bool
+	WwanHardwareEnabled     bool
+	WimaxEnabled            bool
+	WimaxHardwareEnabled    bool
+	ActiveConnections       []dbus.ObjectPath
+	PrimaryConnection       dbus.ObjectPath
+	PrimaryConnectionType   string
+	Metered                 uint32
+	ActivatingConnection    dbus.ObjectPath
+	Startup                 bool
+	Version                 string
+	State                   uint32
+	Connectivity            uint32
+	GlobalDnsConfiguration  map[string]interface{}
+}
 
 //GetSystemDbus return a cached connection to SystemBus
 func GetSystemDbus() (*dbus.Conn, error) {
 
-	if conn != nil {
-		return conn, nil
+	if dbusConn != nil {
+		return dbusConn, nil
 	}
 
 	dconn, err := dbus.SystemBus()
@@ -68,9 +75,9 @@ func GetSystemDbus() (*dbus.Conn, error) {
 		return nil, err
 	}
 
-	conn = dconn
+	dbusConn = dconn
 	log.Debug("DBus connected")
-	return conn, nil
+	return dbusConn, nil
 }
 
 //UpdateDNSServer map servers with domain matching to dnsmasq
@@ -103,10 +110,31 @@ func UpdateDNSServer(ips []string, port int, domains []string) (err error) {
 
 	log.Debugf("Setting dns %v", list)
 
+	conn, err := GetSystemDbus()
+	if err != nil {
+		return err
+	}
+
 	//See also https://github.com/imp/dnsmasq/blob/master/dbus/DBus-interface#L149
 	err = conn.Object(dnsmasqService, dbus.ObjectPath(dnsmasqObjectPath)).Call(dnsmasqBaseInterface+"SetServersEx", 0, list).Store()
 	if err != nil {
 		log.Errorf("Failed to update DNS servers: %s", err.Error())
+	}
+
+	return ClearCache()
+}
+
+//ClearCache clear dnsmasq cache
+func ClearCache() (err error) {
+
+	conn, err := GetSystemDbus()
+	if err != nil {
+		return err
+	}
+
+	err = conn.Object(dnsmasqService, dbus.ObjectPath(dnsmasqObjectPath)).Call(dnsmasqBaseInterface+"ClearCache", 0).Store()
+	if err != nil {
+		log.Errorf("Failed to clear DNS cache: %s", err.Error())
 	}
 
 	return err
@@ -115,15 +143,20 @@ func UpdateDNSServer(ips []string, port int, domains []string) (err error) {
 //ResetDNSServer reset dnsmasq dns to the connection defaults
 func ResetDNSServer() (err error) {
 
-	list := make([][]string, 0)
+	// conn, err := GetSystemDbus()
+	// if err != nil {
+	// 	return err
+	// }
 
-	dnsServers, err := GetDNSServers()
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(dnsServers); i++ {
-		list = append(list, []string{dnsServers[i]})
-	}
+	list := make([][]string, 0)
+	//
+	// dnsServers, err := GetDNSServers()
+	// if err != nil {
+	// 	return err
+	// }
+	// for i := 0; i < len(dnsServers); i++ {
+	// 	list = append(list, []string{dnsServers[i]})
+	// }
 
 	log.Debugf("Setting dns %v", list)
 
@@ -132,7 +165,7 @@ func ResetDNSServer() (err error) {
 		log.Errorf("Failed to update DNS servers: %s", err.Error())
 	}
 
-	return err
+	return ClearCache()
 }
 
 //GetDNSServers return a list of DNSservers in use by the system
@@ -187,19 +220,17 @@ func GetIPs() ([]string, error) {
 
 	ipList := make([]string, 0)
 
-	val, err := conn.Object(nmService, *ip4ConfigObjectPath).GetProperty(nmIP4ConfigBaseInterface + "Addresses")
+	val, err := conn.Object(nmService, *ip4ConfigObjectPath).GetProperty(nmIP4ConfigBaseInterface + "AddressData")
 	if err != nil {
 		log.Errorf("Failed to query %s DBus %s", *ip4ConfigObjectPath, err.Error())
 		return nil, err
 	}
 
-	rawip := val.Value().([][]uint32)
+	rawip := val.Value().([]map[string]dbus.Variant)
 	cnt := len(rawip)
 
-	for ii := 0; ii < cnt; ii++ {
-		for i := 0; i < len(rawip[ii]); i++ {
-			ipList = append(ipList, int2ip(rawip[ii][i]).String())
-		}
+	for i := 0; i < cnt; i++ {
+		ipList = append(ipList, rawip[i]["address"].Value().(string))
 	}
 
 	log.Debugf("Found %d ips", cnt)

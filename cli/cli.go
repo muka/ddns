@@ -55,8 +55,8 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "zones, z",
-			Usage:  "Comma-separated list of managed domain zones",
-			EnvVar: "ZONES",
+			Usage:  "Comma-separated list of domain zones for dnsmasq forwarding",
+			EnvVar: "DNSMASQ_ZONES",
 		},
 		cli.BoolFlag{
 			Name:   "debug",
