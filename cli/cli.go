@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/muka/ddns/api"
 	"github.com/muka/ddns/db"
 	ddns "github.com/muka/ddns/dns"
-	"github.com/muka/ddns/dnsmasq"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -53,11 +51,6 @@ func main() {
 			Usage:  "DNS ip",
 			EnvVar: "PORT",
 		},
-		cli.StringFlag{
-			Name:   "zones, z",
-			Usage:  "Comma-separated list of domain zones for dnsmasq forwarding",
-			EnvVar: "DNSMASQ_ZONES",
-		},
 		cli.BoolFlag{
 			Name:   "debug",
 			Usage:  "Enable debug",
@@ -70,7 +63,6 @@ func main() {
 		debug := c.Bool("debug")
 		dbPath := c.String("dbpath")
 		ip := c.String("ip")
-		zones := c.String("zones")
 		port := c.Int("port")
 		httpServer := c.String("http-server")
 		grpcEndpoint := c.String("grpc-server")
@@ -91,26 +83,6 @@ func main() {
 		dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
 			ddns.HandleDNSRequest(w, r)
 		})
-
-		var ips []string
-		var err error
-		if ip == "" {
-			ips, err = dnsmasq.GetIPs()
-			if err != nil {
-				log.Errorf("Failed to load bindable IPs %s", err.Error())
-				return err
-			}
-		} else {
-			ips = []string{ip}
-		}
-
-		if zones != "" {
-			log.Debug("Updating host DNS")
-			domains := strings.Split(zones, ",")
-			dnsmasq.UpdateDNSServer(ips, port, domains)
-		} else {
-			log.Warnf("No zones specified, dnsmasq integration will be disabled")
-		}
 
 		log.Debug("Starting services")
 		go func() {
@@ -161,7 +133,6 @@ func waitSignal() {
 		select {
 		case s := <-sig:
 			log.Printf("Signal (%d) received, stopping", s)
-			dnsmasq.ResetDNSServer()
 			quit = true
 			break
 		}
