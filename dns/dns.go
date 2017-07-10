@@ -214,7 +214,7 @@ func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 //Serve the DNS server
 func Serve(ip string, port int) error {
 
-	log.Debugf("Starting server on :%d", port)
+	log.Debugf("Starting server on %s:%d", ip, port)
 	server := &dns.Server{Addr: ip + ":" + strconv.Itoa(port), Net: "udp"}
 
 	err := server.ListenAndServe()

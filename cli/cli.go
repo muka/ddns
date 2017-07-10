@@ -48,7 +48,7 @@ func main() {
 		cli.StringFlag{
 			Name:   "ip, i",
 			Value:  "",
-			Usage:  "DNS ip",
+			Usage:  "Bind to specified IP",
 			EnvVar: "PORT",
 		},
 		cli.BoolFlag{
