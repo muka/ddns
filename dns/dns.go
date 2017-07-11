@@ -230,7 +230,7 @@ func Serve(ip string, port int) error {
 //RemoveExpired Check for expired record and remove them
 func RemoveExpired() {
 
-	log.Debug("Checking expired records")
+	// log.Debug("Checking expired records")
 	list, err := db.GetExpiredRecords()
 
 	if err != nil {
@@ -240,7 +240,7 @@ func RemoveExpired() {
 
 	ll := len(list)
 	if ll == 0 {
-		log.Debug("No expired records")
+		// log.Debug("No expired records")
 		return
 	}
 
@@ -248,5 +248,7 @@ func RemoveExpired() {
 		db.DeleteRecord(list[i])
 	}
 
-	log.Debugf("Removed %d expired records", ll)
+	if ll > 0 {
+		log.Debugf("Removed %d expired records", ll)
+	}
 }
