@@ -49,7 +49,7 @@ func main() {
 			Name:   "ip, i",
 			Value:  "",
 			Usage:  "Bind to specified IP",
-			EnvVar: "PORT",
+			EnvVar: "IP",
 		},
 		cli.BoolFlag{
 			Name:   "debug",
