@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -8,10 +9,12 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/muka/ddns/api"
+	coredns_grpc "github.com/muka/ddns/coredns"
 	"github.com/muka/ddns/db"
 	ddns "github.com/muka/ddns/dns"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"google.golang.org/grpc"
 )
 
 const timerSeconds = 15
@@ -51,6 +54,12 @@ func main() {
 			Usage:  "Bind to specified IP",
 			EnvVar: "IP",
 		},
+		cli.StringFlag{
+			Name:   "coredns, c",
+			Value:  "",
+			Usage:  "Expose CoreDNS gRPC endpoint (will disable internal DNS)",
+			EnvVar: "COREDNS",
+		},
 		cli.BoolFlag{
 			Name:   "debug",
 			Usage:  "Enable debug",
@@ -66,6 +75,7 @@ func main() {
 		port := c.Int("port")
 		httpServer := c.String("http-server")
 		grpcEndpoint := c.String("grpc-server")
+		coreDNSEndpoint := c.String("coredns")
 
 		if debug {
 			log.SetLevel(log.DebugLevel)
@@ -80,8 +90,9 @@ func main() {
 
 		// Attach request handler func
 		log.Debug("Attaching DNS handler")
-		dns.HandleFunc(".", func(w dns.ResponseWriter, r *dns.Msg) {
-			ddns.HandleDNSRequest(w, r)
+		dns.HandleFunc(".", func(w dns.ResponseWriter, request *dns.Msg) {
+			response := ddns.HandleDNSRequest(request)
+			w.WriteMsg(response)
 		})
 
 		log.Debug("Starting services")
@@ -96,12 +107,18 @@ func main() {
 			}
 		}()
 
-		// Start server
-		go ddns.Serve(ip, port)
+		if coreDNSEndpoint != "" {
+			go func() {
+				coreDNSGRPC(coreDNSEndpoint)
+			}()
+		} else {
+			// Start internal DNS server
+			go ddns.Serve(ip, port)
+		}
 
-		scheduler()
-		// ticker := scheduler()
-		// ticker.Stop()
+		// scheduler()
+		ticker := scheduler()
+		defer ticker.Stop()
 
 		waitSignal()
 
@@ -109,6 +126,17 @@ func main() {
 	}
 
 	app.Run(os.Args)
+}
+
+func coreDNSGRPC(endpoint string) error {
+	lis, err := net.Listen("tcp", endpoint)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	api.RegisterDnsServiceServer(grpcServer, &coredns_grpc.DnsServer{})
+	defer grpcServer.GracefulStop()
+	return grpcServer.Serve(lis)
 }
 
 func scheduler() *time.Ticker {

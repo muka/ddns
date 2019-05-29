@@ -184,31 +184,31 @@ func parseQuery(m *dns.Msg) bool {
 }
 
 //HandleDNSRequest handle incoming requests
-func HandleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
+func HandleDNSRequest(request *dns.Msg) *dns.Msg {
 
-	m := new(dns.Msg)
-	m.SetReply(r)
-	m.Compress = false
+	response := new(dns.Msg)
+	response.SetReply(request)
+	response.Compress = false
 
-	switch r.Opcode {
+	switch request.Opcode {
 	case dns.OpcodeQuery:
 
-		m.Authoritative = true
+		response.Authoritative = true
 
 		// m.RecursionAvailable = true
 		// m.RecursionDesired = true
 
 		log.Debugf("Got query request")
-		found := parseQuery(m)
+		found := parseQuery(response)
 
 		if !found {
 			// return NXDOMAIN
 			log.Debugf("Record not found")
-			m.SetRcode(r, dns.RcodeNameError)
+			response.SetRcode(request, dns.RcodeNameError)
 		}
 	}
 
-	w.WriteMsg(m)
+	return response
 }
 
 //Serve the DNS server

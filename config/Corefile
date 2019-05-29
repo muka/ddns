@@ -1,0 +1,21 @@
+.:5303 {
+    forward . 8.8.8.8 9.9.9.9
+    log
+    errors
+}
+
+example.local:5303 {
+    log
+    errors
+
+    # https://coredns.io/plugins/grpc/
+    # grpc FROM TO... {
+    #   except IGNORED_NAMES...
+    #   tls CERT KEY CA
+    #   tls_servername NAME
+    #   policy random|round_robin|sequential
+    # }
+
+    grpc . 127.0.0.1:50053
+
+}

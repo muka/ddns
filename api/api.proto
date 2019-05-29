@@ -10,12 +10,12 @@ import "google/api/annotations.proto";
 message Record {
 	string id = 1;
 	// Record IP address
-    string ip = 2;
+  string ip = 2;
 	// Record Name
 	string domain = 3;
-    // Record Type see https://github.com/miekg/dns/blob/master/types.go#L27
-    string type = 4;
-    // Expiration of the record, after which will be removed.
+  // Record Type see https://github.com/miekg/dns/blob/master/types.go#L27
+  string type = 4;
+  // Expiration of the record, after which will be removed.
 	// Default is 0 for not expiring
 	int32 expires = 5;
     // TTL time to live of the record
@@ -24,17 +24,15 @@ message Record {
 	bool PTR = 7;
 }
 
-// DDNS service responds to incoming echo requests.
+
+
 service DDNSService {
-	// Echo method receives a simple message and returns it.
-	// The message posted as the id parameter will also be returned.
 	rpc SaveRecord(Record) returns (Record) {
 		option (google.api.http) = {
 			post: "/v1/record"
 			body: "*"
 		};
 	}
-
 	rpc DeleteRecord(Record) returns (Record) {
 		option (google.api.http) = {
 			delete: "/v1/record/{domain}/{type}"

@@ -16,33 +16,7 @@ docker run -v `pwd`/data:/data raptorbox/ddns-amd64 --debug
 
 ## Setup
 
-Ensure `protoc` is installed and the `*.proto` includes reachable. Eg.
-
-```bash
-wget https://github.com/google/protobuf/releases/download/v3.3.0/protoc-3.3.0-linux-x86_64.zip
-mkdir tmp
-cd tmp
-unzip protoc-3.3.0-linux-x86_64.zip
-sudo cp include/google/ /usr/local/include/ -r
-sudo cp bin/protoc /usr/bin/
-
-```
-
-Get the following go dependencies
-
-```bash
-
-go get -u -f ./...
-
-go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-go get -u github.com/golang/protobuf/protoc-gen-go
-go get -u github.com/go-swagger/go-swagger/cmd/swagger
-go get -u github.com/go-openapi/runtime
-go get -u golang.org/x/net/context
-go get -u golang.org/x/net/context/ctxhttp
-
-```
+Run `make setup` to install go dependencies and a local protoc setup
 
 ## Running
 

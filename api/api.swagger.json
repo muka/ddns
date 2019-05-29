@@ -17,11 +17,10 @@
   "paths": {
     "/v1/record": {
       "post": {
-        "summary": "Echo method receives a simple message and returns it.\nThe message posted as the id parameter will also be returned.",
         "operationId": "SaveRecord",
         "responses": {
           "200": {
-            "description": "",
+            "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/apiRecord"
             }
@@ -47,7 +46,7 @@
         "operationId": "DeleteRecord",
         "responses": {
           "200": {
-            "description": "",
+            "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/apiRecord"
             }
@@ -56,15 +55,54 @@
         "parameters": [
           {
             "name": "domain",
+            "description": "Record Name",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "type",
+            "description": "Record Type see https://github.com/miekg/dns/blob/master/types.go#L27",
             "in": "path",
             "required": true,
             "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "ip",
+            "description": "Record IP address.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "expires",
+            "description": "Expiration of the record, after which will be removed.\nDefault is 0 for not expiring.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "TTL",
+            "description": "TTL time to live of the record.",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "PTR",
+            "description": "Add a PTR (reverse) record.",
+            "in": "query",
+            "required": false,
+            "type": "boolean",
+            "format": "boolean"
           }
         ],
         "tags": [
