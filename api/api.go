@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -140,6 +141,7 @@ func (s *ddnsServer) SaveRecord(ctx context.Context, msg *Record) (*Record, erro
 	}
 
 	rr := getRecord(msg)
+	fmt.Println(rr)
 	rtype := rr.Header().Rrtype
 
 	if rtype == 0 {

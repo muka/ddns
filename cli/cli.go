@@ -88,13 +88,6 @@ func main() {
 		}
 		defer db.Disconnect()
 
-		// Attach request handler func
-		log.Debug("Attaching DNS handler")
-		dns.HandleFunc(".", func(w dns.ResponseWriter, request *dns.Msg) {
-			response := ddns.HandleDNSRequest(request)
-			w.WriteMsg(response)
-		})
-
 		log.Debug("Starting services")
 		go func() {
 			if err := api.Run(grpcEndpoint); err != nil {
@@ -109,9 +102,18 @@ func main() {
 
 		if coreDNSEndpoint != "" {
 			go func() {
+				log.Debugf("Start CoreDNS handler %s", coreDNSEndpoint)
 				coreDNSGRPC(coreDNSEndpoint)
 			}()
 		} else {
+
+			// Attach request handler func
+			log.Debug("Attaching DNS handler")
+			dns.HandleFunc(".", func(w dns.ResponseWriter, request *dns.Msg) {
+				response := ddns.HandleDNSRequest(request)
+				w.WriteMsg(response)
+			})
+
 			// Start internal DNS server
 			go ddns.Serve(ip, port)
 		}
