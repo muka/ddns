@@ -1,10 +1,4 @@
 .:5303 {
-    forward . 8.8.8.8 9.9.9.9
-    log
-    errors
-}
-
-example.local:5303 {
     log
     errors
 
